@@ -1,0 +1,57 @@
+#!/bin/bash
+
+set -e
+
+# Function to print the welcome message with animation
+print_welcome_message() {
+    message="Hello World Script Present By Lenin"
+    delay=0.1
+
+    # Clear the line and set the cursor position
+    tput sc
+    for (( i=0; i<${#message}; i++ )); do
+        tput rc
+        tput el
+        echo -n "${message:0:i+1}"
+        sleep $delay
+    done
+    echo
+}
+
+# Run the welcome message function
+print_welcome_message
+
+echo "Updating package lists and installing necessary utilities..."
+sudo apt update
+sudo apt install -y curl
+
+echo "Downloading and installing Ollama binary..."
+sudo curl -L https://ollama.com/download/ollama-linux-amd64 -o /usr/bin/ollama
+sudo chmod +x /usr/bin/ollama
+
+echo "Creating user for Ollama service..."
+sudo useradd -r -s /bin/false -m -d /usr/share/ollama ollama
+
+echo "Creating systemd service file for Ollama..."
+sudo bash -c 'cat > /etc/systemd/system/ollama.service <<EOF
+[Unit]
+Description=Ollama Service
+After=network-online.target
+
+[Service]
+ExecStart=/usr/bin/ollama serve
+User=ollama
+Group=ollama
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=default.target
+EOF'
+
+echo "Reloading systemd daemon and enabling Ollama service..."
+sudo systemctl daemon-reload
+sudo systemctl enable ollama
+sudo systemctl start ollama
+
+echo "Installation completed successfully!"
